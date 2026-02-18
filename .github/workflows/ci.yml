@@ -43,6 +43,9 @@ jobs:
     env:
       # Variable que usa server/connect.py para conectarse a Postgres
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+      # PYTHONPATH apunta a la raíz del repo para que
+      # "from server.main import app" funcione en los tests
+      PYTHONPATH: ${{ github.workspace }}
 
     steps:
       - name: 📥 Checkout del código
@@ -63,7 +66,7 @@ jobs:
       - name: 🎨 Verificar formato con Black
         run: |
           black --check --diff server/
-        # Si falla → corregir localmente con: black server/
+        # Si falla → corregir localmente con: python -m black server/
 
       - name: 🔍 Lint con Flake8
         run: |
