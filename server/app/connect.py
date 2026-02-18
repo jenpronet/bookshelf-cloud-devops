@@ -46,4 +46,3 @@ engine = create_engine(DATABASE_URL)
 db_session = scoped_session(
     sessionmaker(autocommit=False, autoflush=False, bind=engine)
 )
-
