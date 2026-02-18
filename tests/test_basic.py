@@ -4,17 +4,21 @@ tests/test_basic.py
 Tests básicos para BookShelf Cloud API.
 Repositorio: jenpronet/bookshelf-cloud-devops
 
-Validan que la app FastAPI (server/main.py) levanta
-y que los endpoints principales responden correctamente.
+Agrega server/ al path de Python directamente para
+evitar problemas de módulo con la estructura del repo.
 """
 
-import pytest
-from fastapi.testclient import TestClient
+import sys
+import os
 
 # ─────────────────────────────────────────────────────────
-# El main.py está en server/main.py
+# Agrega server/ al path para que "from main import app"
+# funcione sin depender de server como paquete Python
 # ─────────────────────────────────────────────────────────
-from server.main import app
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "server"))
+
+from fastapi.testclient import TestClient
+from main import app
 
 client = TestClient(app)
 
@@ -36,12 +40,10 @@ def test_app_is_running():
 def test_root_endpoint_no_crash():
     """
     Verifica que el endpoint raíz / responde sin error 5xx.
-    No nos importa el status exacto, solo que la app no crashea.
     """
     response = client.get("/")
     assert response.status_code < 500, (
-        f"El endpoint / retornó error interno: {response.status_code}. "
-        "Revisar logs de la app."
+        f"El endpoint / retornó error interno: {response.status_code}"
     )
 
 
@@ -82,7 +84,6 @@ def test_books_endpoint_responds():
 def test_create_book_bad_payload_returns_422():
     """
     Enviar payload vacío a POST /books debe retornar 422.
-    FastAPI valida automáticamente los campos requeridos.
     Si retorna 500 → hay un bug en el manejo de errores.
     """
     response = client.post("/books", json={})
