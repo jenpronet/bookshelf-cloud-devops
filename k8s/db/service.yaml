@@ -1,0 +1,25 @@
+# k8s/db/service.yaml
+# ─────────────────────────────────────────────
+# Service interno de Postgres.
+# Tipo ClusterIP = solo accesible dentro del cluster,
+# no expuesto al exterior. La app se conecta
+# usando el nombre "postgres-service" como hostname.
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: bookshelf
+  labels:
+    app: bookshelf
+    component: database
+spec:
+  type: ClusterIP     # Solo interno — nunca exponer Postgres al exterior
+  selector:
+    app: bookshelf
+    component: database
+  ports:
+    - name: postgres
+      protocol: TCP
+      port: 5432
+      targetPort: 5432

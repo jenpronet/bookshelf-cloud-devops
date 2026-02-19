@@ -1,0 +1,114 @@
+# k8s/app/deployment.yaml
+# ─────────────────────────────────────────────
+# Deployment de la app FastAPI BookShelf.
+# Define cómo correr el contenedor, cuántas
+# réplicas, health checks y recursos.
+# ─────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookshelf-api
+  namespace: bookshelf
+  labels:
+    app: bookshelf
+    component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bookshelf
+      component: api
+
+  # ── Estrategia de rolling update ───────────
+  # Garantiza cero downtime al actualizar:
+  # - maxSurge: puede crear 1 pod extra durante update
+  # - maxUnavailable: máximo 0 pods caídos al mismo tiempo
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+  template:
+    metadata:
+      labels:
+        app: bookshelf
+        component: api
+    spec:
+      # Service Account de GKE (Workload Identity)
+      serviceAccountName: bookshelf-ksa
+
+      containers:
+        - name: bookshelf-api
+          # Imagen desde Artifact Registry
+          # En CI/CD se reemplaza el tag por el SHA o SemVer
+          image: us-central1-docker.pkg.dev/PROJECT_ID/bookshelf/bookshelf-api:latest
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+
+          # ── Variables de entorno ─────────────
+          # No sensibles: vienen del ConfigMap
+          envFrom:
+            - configMapRef:
+                name: bookshelf-config
+
+          # Sensibles: vienen del Secret
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: bookshelf-secrets
+                  key: database-url
+
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bookshelf-secrets
+                  key: secret-key
+
+          # ── Recursos ────────────────────────
+          # requests: mínimo garantizado al pod
+          # limits: máximo que puede usar
+          resources:
+            requests:
+              cpu: "250m"       # 0.25 CPU
+              memory: "256Mi"
+            limits:
+              cpu: "500m"       # 0.5 CPU
+              memory: "512Mi"
+
+          # ── Health Checks ────────────────────
+          # startupProbe: da tiempo a la app para arrancar
+          # livenessProbe: reinicia el pod si la app muere
+          # readinessProbe: solo envía tráfico cuando está lista
+
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 6
+            # Da hasta 30s para arrancar (5s * 6 intentos)
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+            # Si falla 3 veces seguidas → reinicia el pod
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+            # Si falla → el pod no recibe tráfico (pero no se reinicia)

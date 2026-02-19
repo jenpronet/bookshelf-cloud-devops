@@ -1,0 +1,25 @@
+# k8s/app/service.yaml
+# ─────────────────────────────────────────────
+# Service expone la app dentro del cluster y
+# hacia el exterior via LoadBalancer.
+# En GKE, LoadBalancer crea automáticamente
+# un Google Cloud Load Balancer con IP pública.
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookshelf-service
+  namespace: bookshelf
+  labels:
+    app: bookshelf
+    component: api
+spec:
+  type: LoadBalancer
+  selector:
+    app: bookshelf
+    component: api
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80          # Puerto externo (lo que ve el usuario)
+      targetPort: 8000  # Puerto interno del contenedor FastAPI

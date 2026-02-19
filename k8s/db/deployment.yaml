@@ -1,0 +1,104 @@
+# k8s/db/deployment.yaml
+# ─────────────────────────────────────────────
+# Deployment de PostgreSQL para ambiente DEV.
+#
+# ⚠️ IMPORTANTE: Este deployment es SOLO para DEV.
+# En PROD usar Cloud SQL (servicio gestionado de GCP)
+# que incluye backups, HA y mantenimiento automático.
+# ─────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: bookshelf
+  labels:
+    app: bookshelf
+    component: database
+spec:
+  replicas: 1     # Solo 1 réplica — Postgres no escala horizontalmente así
+  selector:
+    matchLabels:
+      app: bookshelf
+      component: database
+
+  # En DB usamos Recreate (no RollingUpdate)
+  # porque no podemos tener dos instancias escribiendo al mismo disco
+  strategy:
+    type: Recreate
+
+  template:
+    metadata:
+      labels:
+        app: bookshelf
+        component: database
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: postgres
+              containerPort: 5432
+
+          # Variables de entorno desde el Secret
+          env:
+            - name: POSTGRES_DB
+              value: bookshelf
+
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: bookshelf-secrets
+                  key: db-user
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bookshelf-secrets
+                  key: db-password
+
+          # Montar el volumen persistente para los datos
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+              subPath: postgres  # Evita conflictos con carpetas vacías
+
+          # Recursos para DEV (modestos)
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          # Health check de Postgres
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - $(POSTGRES_USER)
+                - -d
+                - $(POSTGRES_DB)
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - $(POSTGRES_USER)
+                - -d
+                - $(POSTGRES_DB)
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc

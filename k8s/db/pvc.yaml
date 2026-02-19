@@ -1,0 +1,27 @@
+# k8s/db/pvc.yaml
+# ─────────────────────────────────────────────
+# PersistentVolumeClaim reserva almacenamiento
+# para la base de datos Postgres.
+# En GKE usa automáticamente un disco de Google
+# (standard o SSD según el storageClass).
+#
+# SOLO para ambiente DEV — en PROD usar
+# Cloud SQL (servicio gestionado de GCP).
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: bookshelf
+  labels:
+    app: bookshelf
+    component: database
+spec:
+  accessModes:
+    - ReadWriteOnce     # Un solo pod puede escribir a la vez
+  resources:
+    requests:
+      storage: 5Gi      # 5 GB para DEV es suficiente
+  storageClassName: standard-rwo
+  # standard-rwo = disco HDD estándar de GCP (más barato para DEV)
+  # premium-rwo  = SSD (usar en PROD para mejor performance)
