@@ -11,24 +11,21 @@ on:
   push:
     branches:
       - main
-  push_tag:
     tags:
       - "v*.*.*"
 
 # ─────────────────────────────────────────────
 # SECRETS requeridos en GitHub → Settings → Secrets:
-#
-#   GCP_PROJECT_ID          → ID de tu proyecto GCP
-#   GCP_REGION              → ej: us-central1
-#   GCP_SA_KEY              → JSON key de la Service Account
-#                             (hasta implementar Workload Identity)
+#   GCP_PROJECT_ID  → ID de tu proyecto GCP
+#   GCP_REGION      → ej: us-central1
+#   GCP_SA_KEY      → JSON key de la Service Account
 # ─────────────────────────────────────────────
 
 env:
-  GCP_REGION:      ${{ secrets.GCP_REGION }}
-  GCP_PROJECT_ID:  ${{ secrets.GCP_PROJECT_ID }}
-  IMAGE_NAME:      bookshelf-api
-  REGISTRY:        ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/bookshelf
+  GCP_REGION:     ${{ secrets.GCP_REGION }}
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  IMAGE_NAME:     bookshelf-api
+  REGISTRY:       ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/bookshelf
 
 jobs:
 
@@ -39,7 +36,6 @@ jobs:
   build-and-push:
     name: 🐳 Build & Push imagen
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
 
     outputs:
       image_tag: ${{ steps.set_tag.outputs.image_tag }}
@@ -68,7 +64,7 @@ jobs:
           # ─────────────────────────────────────
           # NOTA: Para evitar JSON keys estáticas,
           # usar Workload Identity Federation (OIDC):
-          # workload_identity_provider: 'projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL/providers/PROVIDER'
+          # workload_identity_provider: 'projects/PROJECT_NUMBER/...'
           # service_account: 'bookshelf-github-dev@PROJECT_ID.iam.gserviceaccount.com'
           # ─────────────────────────────────────
 
@@ -116,7 +112,6 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: 🚀 Deploy a Cloud Run DEV
-        id: deploy
         run: |
           gcloud run deploy bookshelf-dev \
             --image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.image_tag }} \
