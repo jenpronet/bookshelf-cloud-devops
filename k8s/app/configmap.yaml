@@ -1,0 +1,23 @@
+# k8s/app/configmap.yaml
+# ─────────────────────────────────────────────
+# Variables de entorno NO sensibles de la app.
+# Los valores sensibles (passwords, keys) van
+# en secrets.yaml, NUNCA aquí.
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bookshelf-config
+  namespace: bookshelf
+  labels:
+    app: bookshelf
+    component: api
+data:
+  ENVIRONMENT: "dev"
+  APP_PORT: "8000"
+  LOG_LEVEL: "info"
+  # Host interno de Postgres dentro del cluster
+  # Se conecta via Service name (no IP)
+  DB_HOST: "postgres-service"
+  DB_PORT: "5432"
+  DB_NAME: "bookshelf"

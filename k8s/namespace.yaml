@@ -1,0 +1,13 @@
+# k8s/namespace.yaml
+# ─────────────────────────────────────────────
+# Namespace aísla los recursos de BookShelf
+# del resto del cluster. Buena práctica para
+# separar apps en un mismo cluster GKE.
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bookshelf
+  labels:
+    app: bookshelf
+    managed-by: kubectl
